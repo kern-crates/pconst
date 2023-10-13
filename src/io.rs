@@ -321,3 +321,65 @@ bitflags! {
         const EXTPROC = 0o200000;
     }
 }
+
+bitflags::bitflags! {
+    pub struct OpenFlags: usize {
+        // reserve 3 bits for the access mode
+        const O_RDONLY      = 0;
+        const O_WRONLY      = 1;
+        const O_RDWR        = 2;
+        const O_ACCMODE     = 3;
+        const O_CREAT       = 0o100;
+        const O_EXCL        = 0o200;
+        const O_NOCTTY      = 0o400;
+        const O_TRUNC       = 0o1000;
+        const O_APPEND      = 0o2000;
+        const O_NONBLOCK    = 0o4000;
+        const O_DSYNC       = 0o10000;
+        const O_SYNC        = 0o4010000;
+        const O_RSYNC       = 0o4010000;
+        const O_DIRECTORY   = 0o200000;
+        const O_NOFOLLOW    = 0o400000;
+        const O_CLOEXEC     = 0o2000000;
+
+        const O_ASYNC       = 0o20000;
+        const O_DIRECT      = 0o40000;
+        const O_LARGEFILE   = 0o100000;
+        const O_NOATIME     = 0o1000000;
+        const O_PATH        = 0o10000000;
+        const O_TMPFILE     = 0o20200000;
+    }
+}
+/// Enumeration of possible methods to seek within an I/O object.
+///
+/// It is used by the [`Seek`] trait.
+#[derive(Copy, PartialEq, Eq, Clone, Debug)]
+pub enum SeekFrom {
+    /// Sets the offset to the provided number of bytes.
+    Start(u64),
+    /// Sets the offset to the size of this object plus the specified number of
+    /// bytes.
+    ///
+    /// It is possible to seek beyond the end of an object, but it's an error to
+    /// seek before byte 0.
+    End(i64),
+    /// Sets the offset to the current position plus the specified number of
+    /// bytes.
+    ///
+    /// It is possible to seek beyond the end of an object, but it's an error to
+    /// seek before byte 0.
+    Current(i64),
+}
+
+impl TryFrom<(usize, usize)> for SeekFrom {
+    type Error = ();
+
+    fn try_from(value: (usize, usize)) -> Result<Self, Self::Error> {
+        match value {
+            (0, offset) => Ok(SeekFrom::Start(offset as u64)),
+            (1, offset) => Ok(SeekFrom::Current(offset as i64)),
+            (2, offset) => Ok(SeekFrom::End(offset as i64)),
+            _ => Err(()),
+        }
+    }
+}
