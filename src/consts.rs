@@ -127,6 +127,13 @@ impl ToString for LinuxErrno {
     }
 }
 
+#[cfg(feature = "trick")]
+impl syscall_table::ToIsize for LinuxErrno {
+    fn to_isize(self) -> isize {
+        self as isize
+    }
+}
+
 const SYSCALL_GETCWD: usize = 17;
 const SYSCALL_DUP: usize = 23;
 const SYSCALL_DUP3: usize = 24;

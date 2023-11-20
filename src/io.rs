@@ -179,6 +179,15 @@ bitflags! {
     }
 }
 
+bitflags! {
+    pub struct LinkFlags:u32{
+        /// Follow symbolic links.
+        const AT_SYMLINK_FOLLOW = 0x400;
+        /// Allow empty relative pathname.
+        const AT_EMPTY_PATH = 0x1000;
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct WinSize {
@@ -382,4 +391,219 @@ impl TryFrom<(usize, usize)> for SeekFrom {
             _ => Err(()),
         }
     }
+}
+
+#[repr(C)]
+pub struct Dirent64 {
+    /// ino is an inode number
+    pub ino: u64,
+    /// off is an offset to next linux_dirent
+    pub off: i64,
+    /// reclen is the length of this linux_dirent
+    pub reclen: u16,
+    /// type is the file type
+    pub type_: DirentType,
+    /// name is the filename (null-terminated)
+    pub name: [u8; 0],
+}
+
+impl Dirent64 {
+    pub fn new(name: &str, ino: u64, off: i64, type_: DirentType) -> Self {
+        let size = core::mem::size_of::<Self>() + name.len() + 1;
+        // align to 8 bytes
+        let size = (size + 7) & !7;
+        Self {
+            ino,
+            off,
+            reclen: size as u16,
+            type_,
+            name: [0; 0],
+        }
+    }
+    pub unsafe fn get_name(&self) -> &str {
+        let name = self.name.as_ptr();
+        let name = core::ffi::CStr::from_ptr(name as *const i8);
+        name.to_str().unwrap()
+    }
+    pub fn len(&self) -> usize {
+        self.reclen as usize
+    }
+}
+#[allow(non_camel_case_types)]
+#[repr(u8)]
+pub enum DirentType {
+    DT_UNKNOWN = 0,
+    DT_FIFO = 1,
+    DT_CHR = 2,
+    DT_DIR = 4,
+    DT_BLK = 6,
+    DT_REG = 8,
+    DT_LNK = 10,
+    DT_SOCK = 12,
+    DT_WHT = 14,
+}
+
+impl DirentType {
+    pub fn from_u8(value: u8) -> Self {
+        match value {
+            1 => Self::DT_FIFO,
+            2 => Self::DT_CHR,
+            4 => Self::DT_DIR,
+            6 => Self::DT_BLK,
+            8 => Self::DT_REG,
+            10 => Self::DT_LNK,
+            12 => Self::DT_SOCK,
+            14 => Self::DT_WHT,
+            _ => Self::DT_UNKNOWN,
+        }
+    }
+}
+
+bitflags! {
+    pub struct MountFlags:u32{
+        /// This filesystem is mounted read-only.
+        const MS_RDONLY = 1;
+        /// The set-user-ID and set-group-ID bits are ignored by exec(3) for executable files on this filesystem.
+        const MS_NOSUID = 1 << 1;
+        /// Disallow access to device special files on this filesystem.
+        const MS_NODEV = 1 << 2;
+        /// Execution of programs is disallowed on this filesystem.
+        const MS_NOEXEC = 1 << 3;
+        /// Writes are synched to the filesystem immediately (see the description of O_SYNC in open(2)).
+        const MS_SYNCHRONOUS = 1 << 4;
+        /// Alter flags of a mounted FS
+        const MS_REMOUNT = 1 << 5;
+        /// Allow mandatory locks on an FS
+        const MS_MANDLOCK = 1 << 6;
+        /// Directory modifications are synchronous
+        const MS_DIRSYNC = 1 << 7;
+        /// Do not follow symlinks
+        const MS_NOSYMFOLLOW = 1 << 8;
+        /// Do not update access times.
+        const MS_NOATIME = 1 << 10;
+        /// Do not update directory access times
+        const MS_NODEIRATIME = 1 << 11;
+        const MS_BIND = 1 << 12;
+        const MS_MOVE = 1 << 13;
+        const MS_REC = 1 << 14;
+        /// War is peace. Verbosity is silence.
+        const MS_SILENT = 1 << 15;
+        /// VFS does not apply the umask
+        const MS_POSIXACL = 1 << 16;
+        /// change to unbindable
+        const MS_UNBINDABLE = 1 << 17;
+        /// change to private
+        const MS_PRIVATE = 1 << 18;
+        /// change to slave
+        const MS_SLAVE = 1 << 19;
+        /// change to shared
+        const MS_SHARED = 1 << 20;
+        /// Update atime relative to mtime/ctime.
+        const MS_RELATIME = 1 << 21;
+        /// this is a kern_mount call
+        const MS_KERNMOUNT = 1 << 22;
+        /// Update inode I_version field
+        const MS_I_VERSION = 1 << 23;
+        /// Always perform atime updates
+        const MS_STRICTATIME = 1 << 24;
+        /// Update the on-disk [acm]times lazily
+        const MS_LAZYTIME = 1 << 25;
+        /// These sb flags are internal to the kernel
+        const MS_SUBMOUNT = 1 << 26;
+        const MS_NOREMOTELOCK = 1 << 27;
+        const MS_NOSEC = 1 << 28;
+        const MS_BORN = 1 << 29;
+        const MS_ACTIVE = 1 << 30;
+        const MS_NOUSER = 1 << 31;
+    }
+}
+
+bitflags! {
+    pub struct InodeMode: u32 {
+        /// Type
+        const TYPE_MASK = 0o170000;
+        /// FIFO
+        const FIFO  = 0o010000;
+        /// character device
+        const CHAR  = 0o020000;
+        /// directory
+        const DIR   = 0o040000;
+        /// block device
+        const BLOCK = 0o060000;
+        /// ordinary regular file
+        const FILE  = 0o100000;
+        /// symbolic link
+        const LINK  = 0o120000;
+        /// socket
+        const SOCKET = 0o140000;
+
+        /// Set-user-ID on execution.
+        const SET_UID = 0o4000;
+        /// Set-group-ID on execution.
+        const SET_GID = 0o2000;
+        /// sticky bit
+        const STICKY = 0o1000;
+        /// Read, write, execute/search by owner.
+        const OWNER_MASK = 0o700;
+        /// Read permission, owner.
+        const OWNER_READ = 0o400;
+        /// Write permission, owner.
+        const OWNER_WRITE = 0o200;
+        /// Execute/search permission, owner.
+        const OWNER_EXEC = 0o100;
+
+        /// Read, write, execute/search by group.
+        const GROUP_MASK = 0o70;
+        /// Read permission, group.
+        const GROUP_READ = 0o40;
+        /// Write permission, group.
+        const GROUP_WRITE = 0o20;
+        /// Execute/search permission, group.
+        const GROUP_EXEC = 0o10;
+
+        /// Read, write, execute/search by others.
+        const OTHER_MASK = 0o7;
+        /// Read permission, others.
+        const OTHER_READ = 0o4;
+        /// Write permission, others.
+        const OTHER_WRITE = 0o2;
+        /// Execute/search permission, others.
+        const OTHER_EXEC = 0o1;
+    }
+}
+
+bitflags! {
+    pub struct StatFlags:u32{
+        const AT_EMPTY_PATH = 0x1000;
+        const AT_NO_AUTOMOUNT = 0x800;
+        const AT_SYMLINK_NOFOLLOW = 0x100;
+    }
+}
+
+bitflags! {
+     /// renameat flag
+    pub struct Renameat2Flags: u32 {
+        /// Go back to renameat
+        const RENAME_NONE = 0;
+        /// Atomically exchange oldpath and newpath.
+        const RENAME_EXCHANGE = 1 << 1;
+        /// Don't overwrite newpath of the rename. Return an error if newpath already exists.
+        const RENAME_NOREPLACE = 1 << 0;
+        /// This operation makes sense only for overlay/union filesystem implementations.
+        const RENAME_WHITEOUT = 1 << 2;
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone,Debug,Eq, PartialEq)]
+pub struct RtcTime {
+    pub sec: u32,
+    pub min: u32,
+    pub hour: u32,
+    pub mday: u32,
+    pub mon: u32,
+    pub year: u32,
+    pub wday: u32,  // unused
+    pub yday: u32,  // unused
+    pub isdst: u32, // unused
 }
