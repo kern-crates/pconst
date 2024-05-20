@@ -1,9 +1,11 @@
-use numeric_enum_macro::numeric_enum;
+use int_enum::IntEnum;
+use pod::Pod;
 
-numeric_enum! {
-    #[repr(u32)]
-    #[derive(Eq, PartialEq, Debug, Copy, Clone)]
-    pub enum SyslogAction {
+use crate::time::TimeVal;
+
+#[repr(u32)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, IntEnum)]
+pub enum SyslogAction {
     CLOSE = 0,
     OPEN = 1,
     READ = 2,
@@ -16,10 +18,9 @@ numeric_enum! {
     SizeUnread = 9,
     SizeBuffer = 10,
     Unknown = 11,
-    }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Pod)]
 #[repr(C)]
 pub struct Sysinfo {
     /// Seconds since boot
@@ -51,7 +52,7 @@ pub struct Sysinfo {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default, Pod)]
 pub struct Rusage {
     /// user CPU time used
     pub ru_utime: TimeVal,
@@ -87,74 +88,14 @@ pub struct Rusage {
     ru_nivcsw: isize,
 }
 
-#[repr(C)]
-#[derive(Copy, Clone, Debug, Default, Ord, PartialOrd, Eq, PartialEq)]
-pub struct TimeVal {
-    /// seconds
-    pub tv_sec: usize,
-    /// microseconds
-    pub tv_usec: usize,
-}
-
-impl TimeVal {
-    pub fn new() -> Self {
-        Self {
-            tv_sec: 0,
-            tv_usec: 0,
-        }
-    }
-}
-
-const USEC_PER_SEC: usize = 1000_000;
-
-impl From<usize> for TimeVal {
-    fn from(value: usize) -> Self {
-        Self {
-            tv_sec: value / USEC_PER_SEC,
-            tv_usec: value % USEC_PER_SEC,
-        }
-    }
-}
-
-impl Into<usize> for TimeVal {
-    fn into(self) -> usize {
-        self.tv_sec * USEC_PER_SEC + self.tv_usec
-    }
-}
-
-impl Rusage {
-    pub fn new() -> Self {
-        Self {
-            ru_utime: TimeVal::new(),
-            ru_stime: TimeVal::new(),
-            ru_maxrss: 0,
-            ru_ixrss: 0,
-            ru_idrss: 0,
-            ru_isrss: 0,
-            ru_minflt: 0,
-            ru_majflt: 0,
-            ru_nswap: 0,
-            ru_inblock: 0,
-            ru_oublock: 0,
-            ru_msgsnd: 0,
-            ru_msgrcv: 0,
-            ru_nsignals: 0,
-            ru_nvcsw: 0,
-            ru_nivcsw: 0,
-        }
-    }
-}
-
-numeric_enum! {
-    #[repr(isize)]
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub enum RusageFlag {
-        /// Returns the resource usage of the calling process
-        RusageSelf = 0,
-        /// Returns the resource usage of all children of the calling process that have
-        /// terminated and been waited for
-        RusageChildren = -1,
-        /// Returns the resource usage of the calling thread
-        RusageThread = 1,
-    }
+#[repr(isize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntEnum)]
+pub enum RusageFlag {
+    /// Returns the resource usage of the calling process
+    RusageSelf = 0,
+    /// Returns the resource usage of all children of the calling process that have
+    /// terminated and been waited for
+    RusageChildren = -1,
+    /// Returns the resource usage of the calling thread
+    RusageThread = 1,
 }

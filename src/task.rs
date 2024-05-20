@@ -93,6 +93,8 @@ bitflags! {
     pub struct WaitOptions:u32 {
         const WNOHANG = 1;
         const WUNTRACED = 2;
+        const WEXITED = 0x4;
         const WCONTINUED = 8;
+        const WNOWAIT = 0x01000000;
     }
 }

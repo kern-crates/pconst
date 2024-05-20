@@ -1,83 +1,64 @@
-use bitflags::bitflags;
+use core::{fmt::Debug, mem::offset_of};
 
-#[derive(Debug, Clone, Copy)]
+use bitflags::bitflags;
+use int_enum::IntEnum;
+use pod::Pod;
+#[derive(Debug, Clone, Copy, Pod)]
+#[repr(C)]
 pub struct IoVec {
-    pub base: *mut u8,
+    pub base: usize,
     pub len: usize,
 }
 
 impl IoVec {
-    pub fn new(base: *mut u8, len: usize) -> Self {
-        Self { base, len }
-    }
     pub fn empty() -> Self {
-        Self {
-            base: core::ptr::null_mut(),
-            len: 0,
-        }
+        Self { base: 0, len: 0 }
     }
 }
 
-numeric_enum_macro::numeric_enum! {
-    #[repr(usize)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug)]
-    /// sys_fcntl64 使用的选项
-    pub enum Fcntl64Cmd {
-        /// 复制这个 fd，相当于 sys_dup
-        F_DUPFD = 0,
-        /// 获取 cloexec 信息，即 exec 成功时是否删除该 fd
-        F_GETFD = 1,
-        /// 设置 cloexec 信息，即 exec 成功时删除该 fd
-        F_SETFD = 2,
-        /// 获取 flags 信息
-        F_GETFL = 3,
-        /// 设置 flags 信息
-        F_SETFL = 4,
-        /// 复制 fd，然后设置 cloexec 信息，即 exec 成功时删除该 fd
-        GETLK = 5,
-        SETLK = 6,
-        SETLKW = 7,
-        SETOWN = 8,
-        GETOWN = 9,
-        SETSIG = 10,
-        GETSIG = 11,
-        SETOWN_EX = 15,
-        GETOWN_EX = 16,
-        GETOWNER_UIDS = 17,
-        OFD_GETLK = 36,
-        OFD_SETLK = 37,
-        OFD_SETLKW = 38,
-        SETLEASE = 1024,
-        GETLEASE = 1025,
-        NOTIFY = 1026,
-        CANCELLK = 1029,
-        F_DUPFD_CLOEXEC = 1030,
-        SETPIPE_SZ = 1031,
-        GETPIPE_SZ = 1032,
-        ADD_SEALS = 1033,
-        GET_SEALS = 1034,
-        GET_RW_HINT = 1035,
-        SET_RW_HINT = 1036,
-        GET_FILE_RW_HINT = 1037,
-        SET_FILE_RW_HINT = 1038,
-        Unknown = 0xffff,
-    }
-}
-
-bitflags! {
-    pub struct MapFlags: u32 {
-        /// 该段映射为共享映射，多个进程对该文件映射共享
-        const MAP_SHARED = 0x01;
-        /// (未使用到)对映射区域的写入操作会产生一个映射文件的复制，即私人的"写入时复制"(copy on write)对此区域作的任何修改都不会写回原来的文件内容。
-        const MAP_PRIVATE = 0x02;
-        /// 直接采用`addr`作为绝对地址创建映射。如果参数`start`所指的地址无法成功建立映射时，则放弃映射，不对地址做修正。
-        const MAP_FIXED = 0x10;
-        /// 不采用文件映射。
-        const MAP_ANONYMOUS = 0x20;
-        /// 映射时不保留空间，即可能在实际使用mmp出来的内存时内存溢出
-        const MAP_NORESERVE = 1 << 14;
-    }
+#[derive(Debug, Copy, Clone, Eq, PartialEq, IntEnum)]
+#[repr(u32)]
+#[allow(non_camel_case_types)]
+/// sys_fcntl64 使用的选项
+pub enum Fcntl64Cmd {
+    /// 复制这个 fd，相当于 sys_dup
+    F_DUPFD = 0,
+    /// 获取 cloexec 信息，即 exec 成功时是否删除该 fd
+    F_GETFD = 1,
+    /// 设置 cloexec 信息，即 exec 成功时删除该 fd
+    F_SETFD = 2,
+    /// 获取 flags 信息
+    F_GETFL = 3,
+    /// 设置 flags 信息
+    F_SETFL = 4,
+    /// 复制 fd，然后设置 cloexec 信息，即 exec 成功时删除该 fd
+    GETLK = 5,
+    SETLK = 6,
+    SETLKW = 7,
+    SETOWN = 8,
+    GETOWN = 9,
+    SETSIG = 10,
+    GETSIG = 11,
+    SETOWN_EX = 15,
+    GETOWN_EX = 16,
+    GETOWNER_UIDS = 17,
+    OFD_GETLK = 36,
+    OFD_SETLK = 37,
+    OFD_SETLKW = 38,
+    SETLEASE = 1024,
+    GETLEASE = 1025,
+    NOTIFY = 1026,
+    CANCELLK = 1029,
+    F_DUPFD_CLOEXEC = 1030,
+    SETPIPE_SZ = 1031,
+    GETPIPE_SZ = 1032,
+    ADD_SEALS = 1033,
+    GET_SEALS = 1034,
+    GET_RW_HINT = 1035,
+    SET_RW_HINT = 1036,
+    GET_FILE_RW_HINT = 1037,
+    SET_FILE_RW_HINT = 1038,
+    Unknown = 0xffff,
 }
 
 #[repr(C)]
@@ -109,7 +90,26 @@ pub struct FsStat {
     pub f_spare: [isize; 4],
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+impl Default for FsStat {
+    fn default() -> Self {
+        Self {
+            f_type: 0,
+            f_bsize: 0,
+            f_blocks: 0,
+            f_bfree: 0,
+            f_bavail: 0,
+            f_files: 0,
+            f_ffree: 0,
+            f_fsid: [0, 0],
+            f_namelen: 0,
+            f_frsize: 0,
+            f_flags: 0,
+            f_spare: [0; 4],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, Pod)]
 #[repr(C)]
 pub struct FileStat {
     pub st_dev: u64,
@@ -119,10 +119,10 @@ pub struct FileStat {
     pub st_uid: u32,
     pub st_gid: u32,
     pub st_rdev: u64,
-    __pad: u64,
+    pub __pad: u64,
     pub st_size: u64,
     pub st_blksize: u32,
-    __pad2: u32,
+    pub __pad2: u32,
     pub st_blocks: u64,
     pub st_atime_sec: u64,
     pub st_atime_nsec: u64,
@@ -130,10 +130,13 @@ pub struct FileStat {
     pub st_mtime_nsec: u64,
     pub st_ctime_sec: u64,
     pub st_ctime_nsec: u64,
-    unused: u64,
+    pub unused: u64,
 } //128
+
 bitflags! {
     /// ppoll 使用，表示对应在文件上等待或者发生过的事件
+    #[derive(Pod)]
+    #[repr(C)]
     pub struct PollEvents: u16 {
         /// 可读
         const IN = 0x0001;
@@ -149,7 +152,7 @@ bitflags! {
 }
 
 #[repr(C)]
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Pod)]
 /// ppoll 系统调用参数用到的结构
 pub struct PollFd {
     /// 等待的 fd
@@ -158,6 +161,16 @@ pub struct PollFd {
     pub events: PollEvents,
     /// 返回的事件
     pub revents: PollEvents,
+}
+
+impl Default for PollFd {
+    fn default() -> Self {
+        Self {
+            fd: 0,
+            events: PollEvents::empty(),
+            revents: PollEvents::empty(),
+        }
+    }
 }
 
 bitflags! {
@@ -189,7 +202,7 @@ bitflags! {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Pod)]
 pub struct WinSize {
     ws_row: u16,
     ws_col: u16,
@@ -208,52 +221,50 @@ impl Default for WinSize {
     }
 }
 
-numeric_enum_macro::numeric_enum! {
-    #[repr(u32)]
-    #[allow(non_camel_case_types)]
-    #[derive(Debug, Eq, PartialEq,Copy, Clone)]
-    pub enum TeletypeCommand {
-        // For struct termios
-        /// Gets the current serial port settings.
-        TCGETS = 0x5401,
-        /// Sets the serial port settings immediately.
-        TCSETS = 0x5402,
-        /// Sets the serial port settings after allowing the input and output buffers to drain/empty.
-        TCSETSW = 0x5403,
-        /// Sets the serial port settings after flushing the input and output buffers.
-        TCSETSF = 0x5404,
-        /// For struct termio
-        /// Gets the current serial port settings.
-        TCGETA = 0x5405,
-        /// Sets the serial port settings immediately.
-        TCSETA = 0x5406,
-        /// Sets the serial port settings after allowing the input and output buffers to drain/empty.
-        TCSETAW = 0x5407,
-        /// Sets the serial port settings after flushing the input and output buffers.
-        TCSETAF = 0x5408,
-        /// Get the process group ID of the foreground process group on this terminal.
-        TIOCGPGRP = 0x540F,
-        /// Set the foreground process group ID of this terminal.
-        TIOCSPGRP = 0x5410,
-        /// Get window size.
-        TIOCGWINSZ = 0x5413,
-        /// Set window size.
-        TIOCSWINSZ = 0x5414,
-        /// Non-cloexec
-        FIONCLEX = 0x5450,
-        /// Cloexec
-        FIOCLEX = 0x5451,
-        /// rustc using pipe and ioctl pipe file with this request id
-        /// for non-blocking/blocking IO control setting
-        FIONBIO = 0x5421,
-        /// Read time
-        RTC_RD_TIME = 0x80247009,
-        ILLEAGAL = 0,
-    }
+#[repr(u32)]
+#[allow(non_camel_case_types)]
+#[derive(Debug, Eq, PartialEq, Copy, Clone, IntEnum)]
+pub enum TeletypeCommand {
+    // For struct termios
+    /// Gets the current serial port settings.
+    TCGETS = 0x5401,
+    /// Sets the serial port settings immediately.
+    TCSETS = 0x5402,
+    /// Sets the serial port settings after allowing the input and output buffers to drain/empty.
+    TCSETSW = 0x5403,
+    /// Sets the serial port settings after flushing the input and output buffers.
+    TCSETSF = 0x5404,
+    /// For struct termio
+    /// Gets the current serial port settings.
+    TCGETA = 0x5405,
+    /// Sets the serial port settings immediately.
+    TCSETA = 0x5406,
+    /// Sets the serial port settings after allowing the input and output buffers to drain/empty.
+    TCSETAW = 0x5407,
+    /// Sets the serial port settings after flushing the input and output buffers.
+    TCSETAF = 0x5408,
+    /// Get the process group ID of the foreground process group on this terminal.
+    TIOCGPGRP = 0x540F,
+    /// Set the foreground process group ID of this terminal.
+    TIOCSPGRP = 0x5410,
+    /// Get window size.
+    TIOCGWINSZ = 0x5413,
+    /// Set window size.
+    TIOCSWINSZ = 0x5414,
+    /// Non-cloexec
+    FIONCLEX = 0x5450,
+    /// Cloexec
+    FIOCLEX = 0x5451,
+    /// rustc using pipe and ioctl pipe file with this request id
+    /// for non-blocking/blocking IO control setting
+    FIONBIO = 0x5421,
+    /// Read time
+    RTC_RD_TIME = 0x80247009,
+    ILLEAGAL = 0,
 }
 
 #[repr(C)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Pod)]
 /// The termios functions describe a general terminal interface that
 /// is provided to control asynchronous communications ports.
 pub struct Termios {
@@ -394,6 +405,7 @@ impl TryFrom<(usize, usize)> for SeekFrom {
 }
 
 #[repr(C)]
+#[derive(Clone, Pod, Copy)]
 pub struct Dirent64 {
     /// ino is an inode number
     pub ino: u64,
@@ -402,35 +414,52 @@ pub struct Dirent64 {
     /// reclen is the length of this linux_dirent
     pub reclen: u16,
     /// type is the file type
-    pub type_: DirentType,
+    pub ty: u8,
     /// name is the filename (null-terminated)
     pub name: [u8; 0],
 }
 
+impl Debug for Dirent64 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Dirent64")
+            .field("ino", &self.ino)
+            .field("off", &self.off)
+            .field("reclen", &self.reclen)
+            .field("ty", &DirentType::from_u8(self.ty))
+            .field("name", &core::str::from_utf8(&self.name).unwrap())
+            .finish()
+    }
+}
+
 impl Dirent64 {
-    pub fn new(name: &str, ino: u64, off: i64, type_: DirentType) -> Self {
-        let size = core::mem::size_of::<Self>() + name.len() + 1;
+    pub fn new(name: &str, ino: u64, off: i64, ty: DirentType) -> Self {
+        let size = core::mem::size_of::<Self>() + name.as_bytes().len() + 1;
         // align to 8 bytes
         let size = (size + 7) & !7;
         Self {
             ino,
             off,
             reclen: size as u16,
-            type_,
+            ty: u8::from(ty),
             name: [0; 0],
         }
     }
-    pub unsafe fn get_name(&self) -> &str {
-        let name = self.name.as_ptr();
-        let name = core::ffi::CStr::from_ptr(name as *const i8);
-        name.to_str().unwrap()
+
+    pub fn as_slice(&self) -> &[u8] {
+        self.as_bytes()
     }
+
+    pub fn name_offset(&self) -> usize {
+        offset_of!(Self, name)
+    }
+
     pub fn len(&self) -> usize {
         self.reclen as usize
     }
 }
 #[allow(non_camel_case_types)]
 #[repr(u8)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, IntEnum)]
 pub enum DirentType {
     DT_UNKNOWN = 0,
     DT_FIFO = 1,
@@ -593,9 +622,46 @@ bitflags! {
         const RENAME_WHITEOUT = 1 << 2;
     }
 }
+bitflags! {
+    pub struct ProtFlags: u32 {
+        const PROT_NONE = 0x0;
+        const PROT_READ = 0x1;
+        const PROT_WRITE = 0x2;
+        const PROT_EXEC = 0x4;
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Debug, IntEnum)]
+#[repr(u8)]
+pub enum MMapType {
+    File = 0x0, // Invalid
+    Shared = 0x1,
+    Private = 0x2,
+    SharedValidate = 0x3,
+}
+pub const MMAP_TYPE_MASK: u32 = 0xf;
+
+bitflags! {
+    pub struct MMapFlags : u32 {
+        const MAP_FIXED           = 0x10;
+        const MAP_ANONYMOUS       = 0x20;
+        const MAP_32BIT           = 0x40;
+        const MAP_GROWSDOWN       = 0x100;
+        const MAP_DENYWRITE       = 0x800;
+        const MAP_EXECUTABLE      = 0x1000;
+        const MAP_LOCKED          = 0x2000;
+        const MAP_NORESERVE       = 0x4000;
+        const MAP_POPULATE        = 0x8000;
+        const MAP_NONBLOCK        = 0x10000;
+        const MAP_STACK           = 0x20000;
+        const MAP_HUGETLB         = 0x40000;
+        const MAP_SYNC            = 0x80000;
+        const MAP_FIXED_NOREPLACE = 0x100000;
+    }
+}
 
 #[repr(C)]
-#[derive(Copy, Clone,Debug,Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default, Pod)]
 pub struct RtcTime {
     pub sec: u32,
     pub min: u32,
