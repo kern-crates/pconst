@@ -8,6 +8,14 @@ use pod::Pod;
 pub use siginfo::{SigInfo, SigProcMaskHow};
 pub use ucontext::SignalUserContext;
 
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Default, Pod)]
+pub struct SignalStack {
+    pub ss_sp: usize,
+    pub ss_flags: i32,
+    pub ss_size: usize,
+}
+
 mod action;
 mod number;
 mod siginfo;

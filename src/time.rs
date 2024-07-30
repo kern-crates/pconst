@@ -21,6 +21,7 @@
 // /* Like CLOCK_REALTIME but in International Atomic Time.  */
 // # define CLOCK_TAI			11
 
+use bitflags::bitflags;
 use int_enum::IntEnum;
 use pod::Pod;
 
@@ -110,4 +111,19 @@ pub struct ITimerVal {
     pub it_interval: TimeVal,
     /// 计时器当前所剩时间
     pub it_value: TimeVal,
+}
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Default, Pod)]
+pub struct ITimeSpec {
+    /// Interval for periodic timer
+    pub it_interval: TimeSpec,
+    /// Initial expiration
+    pub it_value: TimeSpec,
+}
+
+bitflags! {
+    pub struct TimerFdFlags:u32{
+        const TFD_TIMER_ABSTIME = 1;
+        const TFD_TIMER_CANCEL_ON_SET = 2;
+    }
 }

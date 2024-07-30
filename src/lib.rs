@@ -7,6 +7,7 @@ pub use consts::*;
 
 pub mod aux;
 mod consts;
+pub mod epoll;
 pub mod io;
 pub mod ipc;
 pub mod net;

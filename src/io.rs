@@ -1,8 +1,10 @@
 use core::{fmt::Debug, mem::offset_of};
 
+use crate::epoll::EpollEventType;
 use bitflags::bitflags;
 use int_enum::IntEnum;
 use pod::Pod;
+
 #[derive(Debug, Clone, Copy, Pod)]
 #[repr(C)]
 pub struct IoVec {
@@ -133,23 +135,7 @@ pub struct FileStat {
     pub unused: u64,
 } //128
 
-bitflags! {
-    /// ppoll 使用，表示对应在文件上等待或者发生过的事件
-    #[derive(Pod)]
-    #[repr(C)]
-    pub struct PollEvents: u16 {
-        /// 可读
-        const IN = 0x0001;
-        /// 可写
-        const OUT = 0x0004;
-        /// 报错
-        const ERR = 0x0008;
-        /// 已终止，如 pipe 的另一端已关闭连接的情况
-        const HUP = 0x0010;
-        /// 无效的 fd
-        const INVAL = 0x0020;
-    }
-}
+pub type PollEvents = EpollEventType;
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Pod)]
