@@ -2,7 +2,8 @@ use bitflags::bitflags;
 use int_enum::IntEnum;
 use pod::Pod;
 
-#[derive(Debug, Copy, Clone, Default)]
+#[repr(C)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct EpollEvent {
     pub events: EpollEventType,
     pub data: u64,
